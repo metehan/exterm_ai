@@ -1,0 +1,257 @@
+/* ==========================================================================
+   LAYOUT STYLES
+   Main application layout, panels, activity bar, and resize functionality
+   ========================================================================== */
+
+/* Main Layout Container */
+.bar-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    background: #1e1e1e;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Activity Bar (Left Sidebar) */
+.activity-bar {
+    width: 48px;
+    background: #2d2d30;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #3e3e42;
+    flex-shrink: 0;
+}
+
+.activity-item {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #cccccc;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border: 2px solid transparent;
+}
+
+.activity-item:hover {
+    background: #37373d;
+    color: #ffffff;
+}
+
+.activity-item.active {
+    background: #37373d;
+    color: #ffffff;
+    border-left: 2px solid #007acc;
+}
+
+/* Main Content Area */
+.main-content {
+    flex: 1;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+    width: calc(100vw - 48px); /* Full width minus activity bar */
+    height: 100vh;
+}
+
+/* Panel Base Styles */
+.panel {
+    background: #252526;
+    border-right: 1px solid #3e3e42;
+    display: none;
+    flex-direction: column;
+    min-width: 200px;
+    max-width: none; /* Remove max-width constraint */
+    overflow: hidden;
+    height: 100vh;
+    position: relative;
+}
+
+.panel.active {
+    display: flex;
+}
+
+.panel.hidden {
+    display: none;
+}
+
+/* Panel Layout Configuration */
+#left-panel {
+    width: 250px;
+    flex: none;
+    display: none; /* Hidden by default */
+}
+
+#left-panel.active {
+    display: flex;
+}
+
+#middle-panel {
+    width: 50%;
+    flex: none;
+    min-width: 200px;
+}
+
+#right-panel {
+    width: 50%;
+    flex: none;
+    min-width: 200px;
+}
+
+/* When resizing, panels should not use flex */
+.panel.resizing {
+    flex: none !important;
+}
+
+/* Panel Headers */
+.panel-header {
+    height: 35px;
+    background: #2d2d30;
+    border-bottom: 1px solid #3e3e42;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #cccccc;
+    text-transform: uppercase;
+    font-weight: 600;
+    flex-shrink: 0;
+    letter-spacing: 0.5px;
+    min-height: 35px;
+}
+
+.panel-controls {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.panel-control-btn {
+    width: 20px;
+    height: 20px;
+    background: none;
+    border: none;
+    color: #cccccc;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    transition: background-color 0.2s;
+}
+
+.panel-control-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+/* Panel Content */
+.panel-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* Resize Handles */
+.resize-handle {
+    width: 3px;
+    background: transparent;
+    cursor: col-resize;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 10;
+    transition: background-color 0.2s;
+    margin-left: -3px; /* Center the handle on the border */
+}
+
+.resize-handle:hover,
+.resize-handle:active,
+body.resizing .resize-handle {
+    background: #274b63b3;
+    border-left: 2px solid #274b63b3;
+}
+
+.resize-handle.horizontal {
+    width: 4px;
+}
+
+/* Explorer Panel Specific */
+.explorer-section {
+    padding: 12px;
+}
+
+.explorer-title {
+    font-size: 11px;
+    color: #cccccc;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.session-item {
+    padding: 4px 8px;
+    border-radius: 3px;
+    background: #37373d;
+    color: #cccccc;
+    font-size: 12px;
+}
+
+/* Panel Actions */
+.panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-indicator {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.status-indicator.ready {
+    background: #16825d;
+    color: white;
+}
+
+.status-indicator.thinking {
+    background: #f59e0b;
+    color: white;
+}
+
+.action-button {
+    background: #a61e4d;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.action-button:hover {
+    background: #be185d;
+}
+
+.action-button:disabled {
+    background: #3c3c3c;
+}

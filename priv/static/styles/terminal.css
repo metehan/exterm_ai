@@ -1,0 +1,93 @@
+/* ==========================================================================
+   TERMINAL STYLES
+   Xterm.js terminal styling and layout fixes
+   ========================================================================== */
+
+/* Fixed terminal dimensions - prevent layout shifts */
+#terminal {
+    contain: size layout;
+}
+
+.terminal-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Override any xterm.js default styles - Force full height */
+#terminal {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Force the terminal viewport to fill container completely */
+#terminal .xterm-viewport {
+    width: 100% !important;
+    height: 100% !important;
+    flex: 1 !important;
+    overflow-y: auto !important;
+}
+
+#terminal .xterm-screen {
+    width: 100% !important;
+    min-height: 100% !important;
+    flex: 1 !important;
+}
+
+/* Force xterm container elements to fill parent */
+#terminal .terminal,
+#terminal .xterm {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Ensure the character rows fill the viewport */
+#terminal .xterm-rows {
+    height: 100% !important;
+    flex: 1 !important;
+}
+
+/* Custom scrollbar for terminal - match chat styling */
+#terminal .xterm-viewport::-webkit-scrollbar {
+    width: 6px;
+}
+
+#terminal .xterm-viewport::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+
+#terminal .xterm-viewport::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+}
+
+#terminal .xterm-viewport::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
+
+/* Also apply to any scrollable elements within terminal */
+.terminal-content *::-webkit-scrollbar {
+    width: 6px;
+}
+
+.terminal-content *::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+
+.terminal-content *::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+}
+
+.terminal-content *::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
