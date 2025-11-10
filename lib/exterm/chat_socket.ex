@@ -531,6 +531,21 @@ defmodule Exterm.ChatSocket do
                 })
 
                 case chunk do
+                  # Handle reasoning field (for models like Qwen3-VL-Thinking, DeepSeek-R1, OpenAI o1)
+                  %{"choices" => [%{"delta" => %{"reasoning" => reasoning}} | _]}
+                  when is_binary(reasoning) and reasoning != "" ->
+                    ChatLogger.log_stream_event(session_id, "continuation", "reasoning_chunk", %{
+                      reasoning: reasoning,
+                      length: String.length(reasoning)
+                    })
+
+                    send(
+                      websocket_pid,
+                      {:stream_chunk, %{content: reasoning, role: "thinking", session_id: session_id}}
+                    )
+
+                    {content_acc, tool_acc}
+
                   %{"choices" => [%{"delta" => %{"content" => content, "role" => role}} | _]}
                   when is_binary(content) ->
                     # Send chunk immediately if content is not empty
@@ -863,6 +878,16 @@ defmodule Exterm.ChatSocket do
                 stream
                 |> Enum.reduce({"", []}, fn chunk, {content_acc, tool_acc} ->
                   case chunk do
+                    # Handle reasoning field (for models like Qwen3-VL-Thinking, DeepSeek-R1, OpenAI o1)
+                    %{"choices" => [%{"delta" => %{"reasoning" => reasoning}} | _]}
+                    when is_binary(reasoning) and reasoning != "" ->
+                      send(
+                        websocket_pid,
+                        {:stream_chunk, %{content: reasoning, role: "thinking", session_id: session_id}}
+                      )
+
+                      {content_acc, tool_acc}
+
                     %{"choices" => [%{"delta" => %{"content" => content, "role" => role}} | _]}
                     when is_binary(content) ->
                       # Only send chunk to frontend if content is not empty
