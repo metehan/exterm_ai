@@ -58,8 +58,6 @@ defmodule Exterm.Llm.ReqClient do
     # Add tools if provided (try OpenAI format first)
     req_opts =
       if functions do
-        IO.puts("ReqClient: chat() Adding #{length(functions)} tools")
-
         req_opts
         |> Keyword.put(:tools, functions)
         # CRITICAL: For Claude via OpenRouter, tool_choice is REQUIRED
@@ -105,11 +103,8 @@ defmodule Exterm.Llm.ReqClient do
     # If tools are present OR history has tool messages, use direct HTTP streaming
     # ReqLLM has issues with both tool call parsing AND tool role messages
     if (functions && length(functions) > 0) || has_tool_messages do
-      if has_tool_messages do
-        IO.puts("ReqClient: Tool role messages in history, using direct HTTP streaming")
-      else
-        IO.puts("ReqClient: Tools present, using direct HTTP streaming")
-      end
+      reason = if has_tool_messages, do: "tool role messages in history", else: "tools present"
+      IO.puts("ReqClient: Using direct HTTP streaming (#{reason})")
 
       stream_chat_with_http(provider, prompt, opts)
     else
@@ -149,9 +144,6 @@ defmodule Exterm.Llm.ReqClient do
     # Add tools if provided
     req_opts =
       if functions do
-        IO.puts("ReqClient: Adding #{length(functions)} tools to request")
-        IO.puts("ReqClient: First tool: #{inspect(List.first(functions))}")
-
         req_opts
         |> Keyword.put(:tools, functions)
         # CRITICAL: For OpenRouter, tool_choice is REQUIRED for reliable tool calling
@@ -160,7 +152,6 @@ defmodule Exterm.Llm.ReqClient do
         # Consider adding explicit instructions in system prompt to use tools
         |> Keyword.put(:tool_choice, "auto")
       else
-        IO.puts("ReqClient: No tools provided")
         req_opts
       end
 
@@ -236,11 +227,6 @@ defmodule Exterm.Llm.ReqClient do
     # Transform ReqLLM.StreamResponse to our old format
     stream_response.stream
     |> Stream.map(fn chunk ->
-      # Log what we're receiving
-      IO.puts(
-        "ReqClient: Chunk type=#{inspect(chunk.type)}, text=#{inspect(chunk.text)}, name=#{inspect(chunk.name)}"
-      )
-
       # Simple pass-through: just convert chunk type to our format
       case chunk.type do
         :content when chunk.text not in [nil, ""] ->
@@ -265,10 +251,6 @@ defmodule Exterm.Llm.ReqClient do
           }
 
         :tool_call ->
-          IO.puts(
-            "ReqClient: TOOL CALL DETECTED! name=#{chunk.name}, args=#{inspect(chunk.arguments)}"
-          )
-
           # Convert arguments to JSON string if it's a map
           args_json =
             case chunk.arguments do
@@ -368,8 +350,6 @@ defmodule Exterm.Llm.ReqClient do
         base_body
       end
       |> Jason.encode!()
-
-    IO.puts("ReqClient: Starting direct HTTP stream with tools")
 
     # Return a stream using HTTPoison (same as old client)
     Stream.resource(

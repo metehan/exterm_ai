@@ -4,7 +4,7 @@ An advanced web-based terminal emulator with built-in AI assistance powered by O
 
 ## Screenshot
 
-![Elixir Web Terminal](doc/dist/elixir_web_terminal.png)
+![Elixir Web Terminal](priv/static/elixir_web_terminal.png)
 
 ## How It Works
 

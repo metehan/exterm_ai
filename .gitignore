@@ -1,15 +1,21 @@
 # Elixir build and dependencies
 /_build
 /deps
-.qodo
-.idea
+/.qodo
+/.idea
 /.elixir_tools
 /docs/ai
 /temp
 /logs
 
+# Auto-generated documentation
+/doc
+
+# Version control
+/.jj
+
 # Mix local config
-/.elixir_ls/
+/.elixir_ls
 /erl_crash.dump
 
 # OS generated files

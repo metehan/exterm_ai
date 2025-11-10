@@ -7,7 +7,7 @@ defmodule Exterm.Llm.Tools do
   alias Exterm.Llm.Tools.Terminal
   alias Exterm.Llm.Tools.File
   alias Exterm.Llm.Tools.Web
-  alias Exterm.Llm.Tools.Chat
+  alias Exterm.Llm.Tools.ChatSummary
 
   @tools [
     # Terminal tools
@@ -434,7 +434,7 @@ defmodule Exterm.Llm.Tools do
     # The chat_pid is the current process since tools are executed within the Chat GenServer
     chat_pid = self()
 
-    Chat.summarize_chat_with_pid(
+    ChatSummary.summarize_chat_with_pid(
       chat_pid,
       Map.get(params, "reason", "user_request"),
       Map.get(params, "max_history_length", 10),
@@ -452,7 +452,7 @@ defmodule Exterm.Llm.Tools do
 
   # Special case for summarize_chat with direct messages to avoid deadlock (4-parameter version)
   def execute_tool("summarize_chat", params, _chat_socket_pid, messages) do
-    Chat.summarize_chat_with_messages(
+    ChatSummary.summarize_chat_with_messages(
       messages,
       Map.get(params, "reason", "user_request"),
       Map.get(params, "max_history_length", 10),
