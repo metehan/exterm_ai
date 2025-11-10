@@ -541,7 +541,8 @@ defmodule Exterm.ChatSocket do
 
                     send(
                       websocket_pid,
-                      {:stream_chunk, %{content: reasoning, role: "thinking", session_id: session_id}}
+                      {:stream_chunk,
+                       %{content: reasoning, role: "thinking", session_id: session_id}}
                     )
 
                     {content_acc, tool_acc}
@@ -883,7 +884,8 @@ defmodule Exterm.ChatSocket do
                     when is_binary(reasoning) and reasoning != "" ->
                       send(
                         websocket_pid,
-                        {:stream_chunk, %{content: reasoning, role: "thinking", session_id: session_id}}
+                        {:stream_chunk,
+                         %{content: reasoning, role: "thinking", session_id: session_id}}
                       )
 
                       {content_acc, tool_acc}
