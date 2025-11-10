@@ -3,7 +3,7 @@
 /deps
 /.qodo
 /.idea
-/.elixir_tools
+/.elixir-tools
 /docs/ai
 /temp
 /logs
@@ -11,8 +11,6 @@
 # Auto-generated documentation
 /doc
 
-# Version control
-/.jj
 
 # Mix local config
 /.elixir_ls
