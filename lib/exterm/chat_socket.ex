@@ -532,55 +532,66 @@ defmodule Exterm.ChatSocket do
 
                 case chunk do
                   # Handle reasoning field (for models like Qwen3-VL-Thinking, DeepSeek-R1, OpenAI o1)
-                  %{"choices" => [%{"delta" => %{"reasoning" => reasoning}} | _]}
-                  when is_binary(reasoning) and reasoning != "" ->
-                    ChatLogger.log_stream_event(session_id, "continuation", "reasoning_chunk", %{
-                      reasoning: reasoning,
-                      length: String.length(reasoning)
-                    })
+                  # Check reasoning first, regardless of content field
+                  %{"choices" => [%{"delta" => delta} | _]} when is_map(delta) ->
+                    reasoning = Map.get(delta, "reasoning")
+                    content = Map.get(delta, "content")
+                    role = Map.get(delta, "role")
 
-                    send(
-                      websocket_pid,
-                      {:stream_chunk,
-                       %{content: reasoning, role: "thinking", session_id: session_id}}
-                    )
+                    cond do
+                      # If we have reasoning, send it as thinking
+                      is_binary(reasoning) and reasoning != "" ->
+                        ChatLogger.log_stream_event(
+                          session_id,
+                          "continuation",
+                          "reasoning_chunk",
+                          %{
+                            reasoning: reasoning,
+                            length: String.length(reasoning)
+                          }
+                        )
 
-                    {content_acc, tool_acc}
+                        send(
+                          websocket_pid,
+                          {:stream_chunk,
+                           %{content: reasoning, role: "thinking", session_id: session_id}}
+                        )
 
-                  %{"choices" => [%{"delta" => %{"content" => content, "role" => role}} | _]}
-                  when is_binary(content) ->
-                    # Send chunk immediately if content is not empty
-                    if String.trim(content) != "" do
-                      ChatLogger.log_stream_event(session_id, "continuation", "chunk_sent", %{
-                        content: content,
-                        role: role,
-                        length: String.length(content)
-                      })
+                        {content_acc, tool_acc}
 
-                      send(
-                        websocket_pid,
-                        {:stream_chunk, %{content: content, role: role, session_id: session_id}}
-                      )
+                      # If we have content with role
+                      is_binary(content) and content != "" and is_binary(role) ->
+                        ChatLogger.log_stream_event(session_id, "continuation", "chunk_sent", %{
+                          content: content,
+                          role: role,
+                          length: String.length(content)
+                        })
+
+                        send(
+                          websocket_pid,
+                          {:stream_chunk, %{content: content, role: role, session_id: session_id}}
+                        )
+
+                        {content_acc <> content, tool_acc}
+
+                      # If we have content without role
+                      is_binary(content) and content != "" ->
+                        ChatLogger.log_stream_event(session_id, "continuation", "chunk_sent", %{
+                          content: content,
+                          length: String.length(content)
+                        })
+
+                        send(
+                          websocket_pid,
+                          {:stream_chunk, %{content: content, session_id: session_id}}
+                        )
+
+                        {content_acc <> content, tool_acc}
+
+                      # Empty content/reasoning, just continue
+                      true ->
+                        {content_acc, tool_acc}
                     end
-
-                    {content_acc <> content, tool_acc}
-
-                  %{"choices" => [%{"delta" => %{"content" => content}} | _]}
-                  when is_binary(content) ->
-                    # Send chunk immediately if content is not empty (no role specified)
-                    if String.trim(content) != "" do
-                      ChatLogger.log_stream_event(session_id, "continuation", "chunk_sent", %{
-                        content: content,
-                        length: String.length(content)
-                      })
-
-                      send(
-                        websocket_pid,
-                        {:stream_chunk, %{content: content, session_id: session_id}}
-                      )
-                    end
-
-                    {content_acc <> content, tool_acc}
 
                   %{"choices" => [%{"delta" => %{"tool_calls" => delta_tool_calls}} | _]} ->
                     # Handle tool calls in continuation streaming mode
@@ -879,40 +890,46 @@ defmodule Exterm.ChatSocket do
                 stream
                 |> Enum.reduce({"", []}, fn chunk, {content_acc, tool_acc} ->
                   case chunk do
-                    # Handle reasoning field (for models like Qwen3-VL-Thinking, DeepSeek-R1, OpenAI o1)
-                    %{"choices" => [%{"delta" => %{"reasoning" => reasoning}} | _]}
-                    when is_binary(reasoning) and reasoning != "" ->
-                      send(
-                        websocket_pid,
-                        {:stream_chunk,
-                         %{content: reasoning, role: "thinking", session_id: session_id}}
-                      )
+                    # Handle reasoning field and content - check reasoning first
+                    %{"choices" => [%{"delta" => delta} | _]} when is_map(delta) ->
+                      reasoning = Map.get(delta, "reasoning")
+                      content = Map.get(delta, "content")
+                      role = Map.get(delta, "role")
 
-                      {content_acc, tool_acc}
+                      cond do
+                        # If we have reasoning, send it as thinking
+                        is_binary(reasoning) and reasoning != "" ->
+                          send(
+                            websocket_pid,
+                            {:stream_chunk,
+                             %{content: reasoning, role: "thinking", session_id: session_id}}
+                          )
 
-                    %{"choices" => [%{"delta" => %{"content" => content, "role" => role}} | _]}
-                    when is_binary(content) ->
-                      # Only send chunk to frontend if content is not empty
-                      if String.trim(content) != "" do
-                        send(
-                          websocket_pid,
-                          {:stream_chunk, %{content: content, role: role, session_id: session_id}}
-                        )
+                          {content_acc, tool_acc}
+
+                        # If we have content with role
+                        is_binary(content) and content != "" and is_binary(role) ->
+                          send(
+                            websocket_pid,
+                            {:stream_chunk,
+                             %{content: content, role: role, session_id: session_id}}
+                          )
+
+                          {content_acc <> content, tool_acc}
+
+                        # If we have content without role
+                        is_binary(content) and content != "" ->
+                          send(
+                            websocket_pid,
+                            {:stream_chunk, %{content: content, session_id: session_id}}
+                          )
+
+                          {content_acc <> content, tool_acc}
+
+                        # Empty content/reasoning, just continue
+                        true ->
+                          {content_acc, tool_acc}
                       end
-
-                      {content_acc <> content, tool_acc}
-
-                    %{"choices" => [%{"delta" => %{"content" => content}} | _]}
-                    when is_binary(content) ->
-                      # Only send chunk to frontend if content is not empty (no role)
-                      if String.trim(content) != "" do
-                        send(
-                          websocket_pid,
-                          {:stream_chunk, %{content: content, session_id: session_id}}
-                        )
-                      end
-
-                      {content_acc <> content, tool_acc}
 
                     %{"choices" => [%{"delta" => %{"tool_calls" => delta_tool_calls}} | _]} ->
                       # Handle tool calls in streaming mode
