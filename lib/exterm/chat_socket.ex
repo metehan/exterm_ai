@@ -890,6 +890,18 @@ defmodule Exterm.ChatSocket do
                 stream
                 |> Enum.reduce({"", []}, fn chunk, {content_acc, tool_acc} ->
                   case chunk do
+                    # Handle tool calls FIRST - before content/reasoning
+                    %{"choices" => [%{"delta" => %{"tool_calls" => delta_tool_calls}} | _]} when is_list(delta_tool_calls) ->
+                      # Handle tool calls in streaming mode
+                      IO.puts(
+                        "ChatSocket: Tool calls detected in stream: #{inspect(delta_tool_calls)}"
+                      )
+
+                      # Merge streaming tool calls
+                      updated_tool_calls = merge_tool_calls(tool_acc, delta_tool_calls)
+
+                      {content_acc, updated_tool_calls}
+
                     # Handle reasoning field and content - check reasoning first
                     %{"choices" => [%{"delta" => delta} | _]} when is_map(delta) ->
                       reasoning = Map.get(delta, "reasoning")
@@ -930,17 +942,6 @@ defmodule Exterm.ChatSocket do
                         true ->
                           {content_acc, tool_acc}
                       end
-
-                    %{"choices" => [%{"delta" => %{"tool_calls" => delta_tool_calls}} | _]} ->
-                      # Handle tool calls in streaming mode
-                      IO.puts(
-                        "ChatSocket: Tool calls detected in stream: #{inspect(delta_tool_calls)}"
-                      )
-
-                      # Merge streaming tool calls
-                      updated_tool_calls = merge_tool_calls(tool_acc, delta_tool_calls)
-
-                      {content_acc, updated_tool_calls}
 
                     %{"choices" => [%{"finish_reason" => reason} | _]} when reason != nil ->
                       IO.puts("ChatSocket: Stream finished with reason: #{reason}")

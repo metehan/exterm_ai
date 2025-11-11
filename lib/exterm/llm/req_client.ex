@@ -345,11 +345,29 @@ defmodule Exterm.Llm.ReqClient do
 
     body =
       if functions && length(functions) > 0 do
-        Map.put(base_body, :tools, functions)
+        base_body
+        |> Map.put(:tools, functions)
+        # CRITICAL: For Claude via OpenRouter, tool_choice is REQUIRED
+        # Without this, Claude treats tools as documentation only and won't actually call them
+        |> Map.put(:tool_choice, "auto")
       else
         base_body
       end
-      |> Jason.encode!()
+
+    # Debug: Log what we're sending
+    IO.puts("\n=== ReqClient: HTTP Streaming Request ===")
+    IO.puts("Model: #{model}")
+    IO.puts("Tools count: #{if functions, do: length(functions), else: 0}")
+    IO.puts("Has tool_choice: #{Map.has_key?(body, :tool_choice)}")
+    IO.puts("Body keys: #{inspect(Map.keys(body))}")
+
+    if Map.has_key?(body, :tools) do
+      IO.puts("First tool: #{inspect(hd(body.tools)["function"]["name"])}")
+    end
+
+    IO.puts("=========================================\n")
+
+    body = Jason.encode!(body)
 
     # Return a stream using HTTPoison (same as old client)
     Stream.resource(
@@ -383,6 +401,14 @@ defmodule Exterm.Llm.ReqClient do
             %HTTPoison.AsyncChunk{id: ^id, chunk: chunk} ->
               HTTPoison.stream_next(%HTTPoison.AsyncResponse{id: id})
               parsed_chunks = parse_sse_chunk(chunk)
+
+              # Debug: Log tool_calls in chunks
+              Enum.each(parsed_chunks, fn parsed ->
+                if parsed && get_in(parsed, ["choices", Access.at(0), "delta", "tool_calls"]) do
+                  IO.puts("ReqClient: Received tool_call chunk: #{inspect(parsed)}")
+                end
+              end)
+
               {parsed_chunks, id}
 
             %HTTPoison.AsyncEnd{id: ^id} ->
