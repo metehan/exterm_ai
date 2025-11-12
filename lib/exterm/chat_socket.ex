@@ -258,6 +258,10 @@ defmodule Exterm.ChatSocket do
         IO.puts("ChatSocket: Received start_ai request")
         handle_start_ai(state)
 
+      {:ok, %{"type" => "execute_tool", "tool_name" => tool_name, "params" => params}} ->
+        IO.puts("ChatSocket: Received execute_tool request: #{tool_name}")
+        handle_execute_tool(tool_name, params, state)
+
       {:error, reason} ->
         IO.puts(
           "ChatSocket: JSON decode error: #{inspect(reason)}, treating as plain text: #{inspect(msg)}"
@@ -891,7 +895,8 @@ defmodule Exterm.ChatSocket do
                 |> Enum.reduce({"", []}, fn chunk, {content_acc, tool_acc} ->
                   case chunk do
                     # Handle tool calls FIRST - before content/reasoning
-                    %{"choices" => [%{"delta" => %{"tool_calls" => delta_tool_calls}} | _]} when is_list(delta_tool_calls) ->
+                    %{"choices" => [%{"delta" => %{"tool_calls" => delta_tool_calls}} | _]}
+                    when is_list(delta_tool_calls) ->
                       # Handle tool calls in streaming mode
                       IO.puts(
                         "ChatSocket: Tool calls detected in stream: #{inspect(delta_tool_calls)}"
@@ -1193,6 +1198,59 @@ defmodule Exterm.ChatSocket do
       IO.puts("ChatSocket[#{session_id}]: Sending start confirmation: #{inspect(start_msg)}")
       {:reply, {:text, Poison.encode!(start_msg)}, state}
     end
+  end
+
+  defp handle_execute_tool(tool_name, params, state) do
+    session_id = state.session_id
+    chat_pid = state.chat_pid
+
+    IO.puts(
+      "ChatSocket[#{session_id}]: Executing tool: #{tool_name} with params: #{inspect(params)}"
+    )
+
+    # Create a tool call message (as if AI made this call)
+    tool_call = %{
+      "id" => "manual_call_#{:erlang.unique_integer([:positive])}",
+      "type" => "function",
+      "function" => %{
+        "name" => tool_name,
+        "arguments" => Jason.encode!(params)
+      }
+    }
+
+    # Create assistant message with tool call
+    assistant_message = %{
+      "content" => "",
+      "tool_calls" => [tool_call]
+    }
+
+    # Use streaming mode so it will automatically continue after tool execution
+    # This way the AI response streams back immediately, just like when AI calls the tool itself
+    websocket_pid = self()
+
+    Task.start(fn ->
+      case Chat.handle_assistant_with_tools(chat_pid, assistant_message, streaming: true) do
+        {:ok, _response} ->
+          IO.puts("ChatSocket[#{session_id}]: Tool execution and continuation completed")
+
+        {:error, error} ->
+          IO.puts("ChatSocket[#{session_id}]: Tool execution failed: #{inspect(error)}")
+
+          send(
+            websocket_pid,
+            {:send_message,
+             %{
+               type: "error",
+               content: "Tool execution failed: #{inspect(error)}",
+               timestamp: DateTime.utc_now() |> DateTime.to_iso8601(),
+               session_id: session_id
+             }}
+          )
+      end
+    end)
+
+    # Return immediately so button press is responsive
+    {:ok, state}
   end
 
   # Helper function to check API key configuration

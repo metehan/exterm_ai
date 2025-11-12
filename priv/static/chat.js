@@ -45,8 +45,9 @@ class ChatManager {
     this.chatSend = document.getElementById('chat-send');
     this.aiStatus = document.getElementById('ai-status');
     this.stopButton = document.getElementById('stop-ai');
+    this.readTerminalBtn = document.getElementById('read-terminal-btn');
 
-    if (!this.chatMessages || !this.chatInput || !this.chatSend || !this.aiStatus || !this.stopButton) {
+    if (!this.chatMessages || !this.chatInput || !this.chatSend || !this.aiStatus || !this.stopButton || !this.readTerminalBtn) {
       console.error('Chat elements not found in DOM');
       return;
     }
@@ -58,6 +59,9 @@ class ChatManager {
 
     // Stop button click
     this.stopButton.addEventListener('click', () => this.stopAI());
+
+    // Read terminal button click
+    this.readTerminalBtn.addEventListener('click', () => this.readTerminal());
 
     // Enter key to send message
     this.chatInput.addEventListener('keypress', (e) => {
@@ -1108,6 +1112,23 @@ class ChatManager {
 
     // Add system message
     this.addSystemMessage('AI execution stopped by user', 'stopped');
+  }
+
+  readTerminal() {
+    if (!this.isConnected) {
+      return;
+    }
+
+    // Send a direct tool execution request to backend (silently)
+    this.socket.send(JSON.stringify({
+      type: 'execute_tool',
+      tool_name: 'read_terminal',
+      params: {
+        lines: 50  // Read last 50 lines
+      }
+    }));
+
+    // No feedback - completely silent, AI will respond
   }
 
   // Override sendMessage to update status

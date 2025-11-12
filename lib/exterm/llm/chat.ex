@@ -383,7 +383,11 @@ defmodule Exterm.Llm.Chat do
 
   # Helper functions
 
-  defp handle_assistant_message(assistant_message, state, streaming_mode \\ false) do
+  defp handle_assistant_message(
+         assistant_message,
+         state,
+         streaming_mode \\ false
+       ) do
     # Check if the assistant message has function calls
     case Map.get(assistant_message, "tool_calls") do
       nil ->
@@ -568,36 +572,14 @@ defmodule Exterm.Llm.Chat do
 
   # Format model names for better display
   defp format_model_name(model) when is_binary(model) do
-    case model do
-      "gemma2-9b-it" ->
-        "Gemma 2 9B"
-
-      "llama-3.1-70b-versatile" ->
-        "Llama 3.1 70B"
-
-      "meta-llama/llama-3-70b-instruct" ->
-        "Llama 3 70B"
-
-      "mistralai/mistral-7b-instruct" ->
-        "Mistral 7B"
-
-      "google/gemma-7b-it" ->
-        "Gemma 7B"
-
-      "nvidia/nemotron-nano-9b-v2" ->
-        "Nemotron Nano 9B"
-
-      _ ->
-        # Extract a readable name from the model string
-        model
-        |> String.split("/")
-        |> List.last()
-        |> String.replace("-", " ")
-        |> String.replace("_", " ")
-        |> String.split()
-        |> Enum.map(&String.capitalize/1)
-        |> Enum.join(" ")
-    end
+    model
+    |> String.split("/")
+    |> List.last()
+    |> String.replace("-", " ")
+    |> String.replace("_", " ")
+    |> String.split()
+    |> Enum.map(&String.capitalize/1)
+    |> Enum.join(" ")
   end
 
   defp format_model_name(_), do: "AI"
