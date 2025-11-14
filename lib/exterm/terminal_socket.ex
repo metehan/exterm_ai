@@ -11,25 +11,54 @@ defmodule Exterm.TerminalSocket do
   def websocket_init(_state) do
     # Generate a unique session ID for this terminal session
     session_id = :crypto.strong_rand_bytes(16) |> Base.encode16()
-    # Find bash path - try common locations
-    bash_path =
-      case System.find_executable("bash") do
-        # fallback to sh if bash not found
-        nil -> "/bin/sh"
-        path -> path
-      end
 
-    # Use script command to create a proper PTY session
-    # script -qefc creates a PTY and runs the command
+    # Detect OS and configure shell accordingly
+    {os_family, os_name} = :os.type()
+
     script_cmd =
-      case System.find_executable("script") do
-        nil ->
-          # Fallback: use bash directly with some PTY-like options
-          "#{bash_path} -i"
+      case os_family do
+        :win32 ->
+          # Windows: Use PowerShell or cmd.exe directly
+          case System.find_executable("pwsh") || System.find_executable("powershell") do
+            nil ->
+              # Fallback to cmd.exe
+              "cmd.exe"
 
-        script_path ->
-          # Use script to create a proper PTY
-          "#{script_path} -qefc '#{bash_path} -i' /dev/null"
+            ps_path ->
+              # Use PowerShell
+              "#{ps_path} -NoLogo -NoExit"
+          end
+
+        :unix ->
+          # Unix-like systems (Linux, macOS, BSD)
+          # Find bash path - try common locations
+          bash_path =
+            case System.find_executable("bash") do
+              # fallback to sh if bash not found
+              nil -> "/bin/sh"
+              path -> path
+            end
+
+          # Use script command to create a proper PTY session
+          # Linux: script -qefc command
+          # macOS: script -q /dev/null command
+          case System.find_executable("script") do
+            nil ->
+              # Fallback: use bash directly with some PTY-like options
+              "#{bash_path} -i"
+
+            script_path ->
+              # Detect Unix variant and use appropriate script syntax
+              case os_name do
+                :darwin ->
+                  # macOS syntax: script -q /dev/null command
+                  "#{script_path} -q /dev/null #{bash_path} -i"
+
+                _ ->
+                  # Linux syntax: script -qefc command /dev/null
+                  "#{script_path} -qefc '#{bash_path} -i' /dev/null"
+              end
+          end
       end
 
     # Spawn the shell with PTY support
